@@ -1,2 +1,2 @@
 # MINEOS_SIH
-SIH hackthone 
+SIH hackthon
