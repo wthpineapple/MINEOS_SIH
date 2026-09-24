@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mine OS - Digital Twin</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #30363d; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #58a6ff; font-size: 26px; text-transform: uppercase; letter-spacing: 2px; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        
+        .video-container { background: #161b22; padding: 15px; border-radius: 8px; border: 1px solid #30363d; text-align: center; }
+        .video-container img { width: 100%; border-radius: 4px; border: 4px solid #238636; transition: border-color 0.2s; }
+        
+        .dashboard { display: flex; flex-direction: column; gap: 15px; }
+        .card { background: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; transition: border-color 0.2s; }
+        .card h3 { margin-top: 0; color: #8b949e; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .stat-value { font-size: 30px; font-weight: bold; margin: 5px 0; }
+        .status-GREEN { color: #3fb950; }
+        .status-YELLOW { color: #d29922; animation: pulse 1s infinite; }
+        .status-RED { color: #f85149; animation: pulse 0.5s infinite; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        button { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #30363d; border-color: #8b949e; }
+        button.danger:hover { background: #da3633; color: white; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Mine OS - Digital Twin</h1>
+        <div>TRUCK ID: <strong>Tipper-14</strong> | SHIFT: <strong>ACTIVE</strong></div>
+    </div>
+
+    <div class="grid">
+        <div class="video-container">
+            <h3 style="color: #8b949e; text-align: left; margin-top: 0;">Edge AI Vision (Active Spatial Filtering)</h3>
+            <!-- DIRECT SERVER LINK ADDED BELOW -->
+            <img id="video-stream" src="http://127.0.0.1:8000/video_feed" alt="Live Feed Offline">
+        </div>
+
+        <div class="dashboard">
+            <div class="card" id="status-card">
+                <h3>System State & Driver HUD</h3>
+                <div id="alert-text" class="stat-value status-GREEN">SYSTEM NORMAL</div>
+                <div style="font-size: 16px; font-weight: bold; color: #58a6ff; margin-top: 10px;">
+                    J1939 ECU Throttle: <span id="throttle-status" style="color: #fff;">NORMAL</span>
+                </div>
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="card">
+                    <h3>Current Speed</h3>
+                    <div id="speed-val" class="stat-value">-- km/h</div>
+                </div>
+                <div class="card">
+                    <h3>Safe Stop Dist.</h3>
+                    <div id="safe-dist-val" class="stat-value" style="color:#58a6ff;">-- m</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Radar Depth Reading</h3>
+                <div id="dist-val" class="stat-value" style="font-size: 24px;">-- m</div>
+            </div>
+
+            <div class="card">
+                <h3>Judges Demo Controls</h3>
+                <div class="btn-grid">
+                    <button onclick="triggerAPI('/toggle_video')">🔁 Switch Video File</button>
+                    <button onclick="triggerAPI('/toggle_dust')">🌪️ Simulate Dust Storm</button>
+                    <button class="danger" onclick="triggerAPI('/trigger_v2v')">⚠️ V2V Radio Override</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DIRECT SERVER LINK ADDED BELOW
+        const ws = new WebSocket('ws://127.0.0.1:8000/ws/telemetry');
+        
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            document.getElementById('speed-val').innerText = data.speed + " km/h";
+            document.getElementById('dist-val').innerText = data.distance + " m";
+            document.getElementById('safe-dist-val').innerText = data.safe_stop_dist + " m";
+            document.getElementById('throttle-status').innerText = data.throttle;
+            
+            const statusCard = document.getElementById('status-card');
+            const alertText = document.getElementById('alert-text');
+            const videoBorder = document.getElementById('video-stream');
+            const throttleText = document.getElementById('throttle-status');
+            
+            alertText.className = `stat-value status-${data.state}`;
+            
+            if(data.state === "RED") {
+                alertText.innerText = "CRITICAL HAZARD!";
+                throttleText.style.color = "#f85149";
+                videoBorder.style.borderColor = "#f85149";
+            } else if (data.state === "YELLOW") {
+                alertText.innerText = "SLOW DOWN!";
+                throttleText.style.color = "#d29922";
+                videoBorder.style.borderColor = "#d29922";
+            } else {
+                alertText.innerText = "SYSTEM NORMAL";
+                throttleText.style.color = "#fff";
+                videoBorder.style.borderColor = "#238636";
+            }
+        };
+
+        function triggerAPI(endpoint) {
+            // DIRECT SERVER LINK ADDED BELOW
+            fetch('http://127.0.0.1:8000' + endpoint, { method: 'POST' });
+        }
+    </script>
+</body>
+</html>
